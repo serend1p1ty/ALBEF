@@ -5,12 +5,13 @@ Lifted from https://github.com/pytorch/fairseq/blob/master/fairseq/optim/adafact
 Original header/copyright below.
 
 """
+import math
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import torch
-import math
 
 
 class Adafactor(torch.optim.Optimizer):
@@ -41,15 +42,17 @@ class Adafactor(torch.optim.Optimizer):
     """
 
     def __init__(self, params, lr=None, eps=1e-30, eps_scale=1e-3, clip_threshold=1.0,
-                 decay_rate=-0.8, betas=None, weight_decay=0.0, scale_parameter=True, warmup_init=False):
+                 decay_rate=-0.8, betas=None, weight_decay=0.0, scale_parameter=True,
+                 warmup_init=False):
         relative_step = lr is None
         if warmup_init and not relative_step:
             raise ValueError('warmup_init requires relative_step=True')
 
-        beta1 = None if betas is None else betas[0]   # make it compat with standard betas arg
-        defaults = dict(lr=lr, eps=eps, eps_scale=eps_scale, clip_threshold=clip_threshold, decay_rate=decay_rate,
-                        beta1=beta1, weight_decay=weight_decay, scale_parameter=scale_parameter,
-                        relative_step=relative_step, warmup_init=warmup_init)
+        beta1 = None if betas is None else betas[0]  # make it compat with standard betas arg
+        defaults = dict(lr=lr, eps=eps, eps_scale=eps_scale, clip_threshold=clip_threshold,
+                        decay_rate=decay_rate, beta1=beta1, weight_decay=weight_decay,
+                        scale_parameter=scale_parameter, relative_step=relative_step,
+                        warmup_init=warmup_init)
         super(Adafactor, self).__init__(params, defaults)
 
     @staticmethod
@@ -71,10 +74,11 @@ class Adafactor(torch.optim.Optimizer):
 
     @staticmethod
     def _rms(tensor):
-        return tensor.norm(2) / (tensor.numel() ** 0.5)
+        return tensor.norm(2) / (tensor.numel()**0.5)
 
     def _approx_sq_grad(self, exp_avg_sq_row, exp_avg_sq_col):
-        r_factor = (exp_avg_sq_row / exp_avg_sq_row.mean(dim=-1, keepdim=True)).rsqrt_().unsqueeze(-1)
+        r_factor = (exp_avg_sq_row /
+                    exp_avg_sq_row.mean(dim=-1, keepdim=True)).rsqrt_().unsqueeze(-1)
         c_factor = exp_avg_sq_col.unsqueeze(-2).rsqrt()
         return torch.mul(r_factor, c_factor)
 
@@ -110,7 +114,8 @@ class Adafactor(torch.optim.Optimizer):
                         state['exp_avg'] = torch.zeros_like(grad)
                     if factored:
                         state['exp_avg_sq_row'] = torch.zeros(grad_shape[:-1]).to(grad)
-                        state['exp_avg_sq_col'] = torch.zeros(grad_shape[:-2] + grad_shape[-1:]).to(grad)
+                        state['exp_avg_sq_col'] = torch.zeros(grad_shape[:-2] +
+                                                              grad_shape[-1:]).to(grad)
                     else:
                         state['exp_avg_sq'] = torch.zeros_like(grad)
 
@@ -133,15 +138,15 @@ class Adafactor(torch.optim.Optimizer):
                 lr_t = self._get_lr(group, state)
 
                 beta2t = 1.0 - math.pow(state['step'], group['decay_rate'])
-                update = grad ** 2 + group['eps']
+                update = grad**2 + group['eps']
                 if factored:
                     exp_avg_sq_row = state['exp_avg_sq_row']
                     exp_avg_sq_col = state['exp_avg_sq_col']
 
                     exp_avg_sq_row.mul_(beta2t).add_(1.0 - beta2t, update.mean(dim=-1))
                     exp_avg_sq_col.mul_(beta2t).add_(1.0 - beta2t, update.mean(dim=-2))
-                    #exp_avg_sq_row.mul_(beta2t).add_(update.mean(dim=-1), alpha=1.0 - beta2t)  # pytorch 1.6+
-                    #exp_avg_sq_col.mul_(beta2t).add_(update.mean(dim=-2), alpha=1.0 - beta2t)
+                    # exp_avg_sq_row.mul_(beta2t).add_(update.mean(dim=-1), alpha=1.0 - beta2t)  # pytorch 1.6+
+                    # exp_avg_sq_col.mul_(beta2t).add_(update.mean(dim=-2), alpha=1.0 - beta2t)
 
                     # Approximation of exponential moving average of square of gradient
                     update = self._approx_sq_grad(exp_avg_sq_row, exp_avg_sq_col)
@@ -150,7 +155,7 @@ class Adafactor(torch.optim.Optimizer):
                     exp_avg_sq = state['exp_avg_sq']
 
                     exp_avg_sq.mul_(beta2t).add_(1.0 - beta2t, update)
-                    #exp_avg_sq.mul_(beta2t).add_(update, alpha=1.0 - beta2t)  # pytorch 1.6+
+                    # exp_avg_sq.mul_(beta2t).add_(update, alpha=1.0 - beta2t)  # pytorch 1.6+
                     update = exp_avg_sq.rsqrt().mul_(grad)
 
                 update.div_((self._rms(update) / group['clip_threshold']).clamp_(min=1.0))
@@ -159,12 +164,12 @@ class Adafactor(torch.optim.Optimizer):
                 if use_first_moment:
                     exp_avg = state['exp_avg']
                     exp_avg.mul_(group["beta1"]).add_(1 - group["beta1"], update)
-                    #exp_avg.mul_(group['beta1']).add_(update, alpha=1 - group['beta1'])  # pytorch 1.6+
+                    # exp_avg.mul_(group['beta1']).add_(update, alpha=1 - group['beta1'])  # pytorch 1.6+
                     update = exp_avg
 
                 if group['weight_decay'] != 0:
                     p_data_fp32.add_(-group["weight_decay"] * lr_t, p_data_fp32)
-                    #p_data_fp32.add_(p_data_fp32, alpha=-group['weight_decay'] * lr_t)  # pytorch 1.6+
+                    # p_data_fp32.add_(p_data_fp32, alpha=-group['weight_decay'] * lr_t)  # pytorch 1.6+
 
                 p_data_fp32.add_(-update)
 

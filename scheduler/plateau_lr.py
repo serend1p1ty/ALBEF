@@ -12,36 +12,30 @@ from .scheduler import Scheduler
 class PlateauLRScheduler(Scheduler):
     """Decay the LR by a factor every time the validation loss plateaus."""
 
-    def __init__(self,
-                 optimizer,
-                 decay_rate=0.1,
-                 patience_t=10,
-                 verbose=True,
-                 threshold=1e-4,
-                 cooldown_t=0,
-                 warmup_t=0,
-                 warmup_lr_init=0,
-                 lr_min=0,
-                 mode='max',
-                 noise_range_t=None,
-                 noise_type='normal',
-                 noise_pct=0.67,
-                 noise_std=1.0,
-                 noise_seed=None,
-                 initialize=True,
-                 ):
+    def __init__(
+        self,
+        optimizer,
+        decay_rate=0.1,
+        patience_t=10,
+        verbose=True,
+        threshold=1e-4,
+        cooldown_t=0,
+        warmup_t=0,
+        warmup_lr_init=0,
+        lr_min=0,
+        mode='max',
+        noise_range_t=None,
+        noise_type='normal',
+        noise_pct=0.67,
+        noise_std=1.0,
+        noise_seed=None,
+        initialize=True,
+    ):
         super().__init__(optimizer, 'lr', initialize=initialize)
 
         self.lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer,
-            patience=patience_t,
-            factor=decay_rate,
-            verbose=verbose,
-            threshold=threshold,
-            cooldown=cooldown_t,
-            mode=mode,
-            min_lr=lr_min
-        )
+            self.optimizer, patience=patience_t, factor=decay_rate, verbose=verbose,
+            threshold=threshold, cooldown=cooldown_t, mode=mode, min_lr=lr_min)
 
         self.noise_range = noise_range_t
         self.noise_pct = noise_pct

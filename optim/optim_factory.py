@@ -16,7 +16,7 @@ from .rmsprop_tf import RMSpropTF
 from .sgdp import SGDP
 
 try:
-    from apex.optimizers import FusedNovoGrad, FusedAdam, FusedLAMB, FusedSGD
+    from apex.optimizers import FusedAdam, FusedLAMB, FusedNovoGrad, FusedSGD
     has_apex = True
 except ImportError:
     has_apex = False
@@ -32,9 +32,13 @@ def add_weight_decay(model, weight_decay=1e-5, skip_list=()):
             no_decay.append(param)
         else:
             decay.append(param)
-    return [
-        {'params': no_decay, 'weight_decay': 0.},
-        {'params': decay, 'weight_decay': weight_decay}]
+    return [{
+        'params': no_decay,
+        'weight_decay': 0.
+    }, {
+        'params': decay,
+        'weight_decay': weight_decay
+    }]
 
 
 def create_optimizer(args, model, filter_bias_and_bn=True):
@@ -76,9 +80,9 @@ def create_optimizer(args, model, filter_bias_and_bn=True):
         optimizer = Nadam(parameters, **opt_args)
     elif opt_lower == 'radam':
         optimizer = RAdam(parameters, **opt_args)
-    elif opt_lower == 'adamp':        
+    elif opt_lower == 'adamp':
         optimizer = AdamP(parameters, wd_ratio=0.01, nesterov=True, **opt_args)
-    elif opt_lower == 'sgdp':        
+    elif opt_lower == 'sgdp':
         optimizer = SGDP(parameters, momentum=args.momentum, nesterov=True, **opt_args)
     elif opt_lower == 'adadelta':
         optimizer = optim.Adadelta(parameters, **opt_args)

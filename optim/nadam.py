@@ -1,4 +1,3 @@
-import torch
 from torch.optim import Optimizer
 
 
@@ -25,10 +24,10 @@ class Nadam(Optimizer):
         NOTE: Has potential issues but does work well on some problems.
     """
 
-    def __init__(self, params, lr=2e-3, betas=(0.9, 0.999), eps=1e-8,
-                 weight_decay=0, schedule_decay=4e-3):
-        defaults = dict(lr=lr, betas=betas, eps=eps,
-                        weight_decay=weight_decay, schedule_decay=schedule_decay)
+    def __init__(self, params, lr=2e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0,
+                 schedule_decay=4e-3):
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
+                        schedule_decay=schedule_decay)
         super(Nadam, self).__init__(params, defaults)
 
     def step(self, closure=None):
@@ -79,10 +78,12 @@ class Nadam(Optimizer):
                 # Decay the first and second moment running average coefficient
                 exp_avg.mul_(beta1).add_(1. - beta1, grad)
                 exp_avg_sq.mul_(beta2).addcmul_(1. - beta2, grad, grad)
-                exp_avg_sq_prime = exp_avg_sq / (1. - beta2 ** t)
+                exp_avg_sq_prime = exp_avg_sq / (1. - beta2**t)
                 denom = exp_avg_sq_prime.sqrt_().add_(eps)
 
-                p.data.addcdiv_(-group['lr'] * (1. - momentum_cache_t) / (1. - m_schedule_new), grad, denom)
-                p.data.addcdiv_(-group['lr'] * momentum_cache_t_1 / (1. - m_schedule_next), exp_avg, denom)
+                p.data.addcdiv_(-group['lr'] * (1. - momentum_cache_t) / (1. - m_schedule_new),
+                                grad, denom)
+                p.data.addcdiv_(-group['lr'] * momentum_cache_t_1 / (1. - m_schedule_next), exp_avg,
+                                denom)
 
         return loss

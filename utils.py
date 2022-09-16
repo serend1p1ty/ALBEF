@@ -1,12 +1,11 @@
-import numpy as np
-import io
+import datetime
 import os
 import time
 from collections import defaultdict, deque
-import datetime
 
 import torch
 import torch.distributed as dist
+
 
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
@@ -62,15 +61,12 @@ class SmoothedValue(object):
         return self.deque[-1]
 
     def __str__(self):
-        return self.fmt.format(
-            median=self.median,
-            avg=self.avg,
-            global_avg=self.global_avg,
-            max=self.max,
-            value=self.value)
+        return self.fmt.format(median=self.median, avg=self.avg, global_avg=self.global_avg,
+                               max=self.max, value=self.value)
 
 
 class MetricLogger(object):
+
     def __init__(self, delimiter="\t"):
         self.meters = defaultdict(SmoothedValue)
         self.delimiter = delimiter
@@ -87,25 +83,20 @@ class MetricLogger(object):
             return self.meters[attr]
         if attr in self.__dict__:
             return self.__dict__[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, attr))
 
     def __str__(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {}".format(name, str(meter))
-            )
+            loss_str.append("{}: {}".format(name, str(meter)))
         return self.delimiter.join(loss_str)
 
     def global_avg(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {:.4f}".format(name, meter.global_avg)
-            )
-        return self.delimiter.join(loss_str)    
-    
+            loss_str.append("{}: {:.4f}".format(name, meter.global_avg))
+        return self.delimiter.join(loss_str)
+
     def synchronize_between_processes(self):
         for meter in self.meters.values():
             meter.synchronize_between_processes()
@@ -123,11 +114,7 @@ class MetricLogger(object):
         data_time = SmoothedValue(fmt='{avg:.4f}')
         space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
         log_msg = [
-            header,
-            '[{0' + space_fmt + '}/{1}]',
-            'eta: {eta}',
-            '{meters}',
-            'time: {time}',
+            header, '[{0' + space_fmt + '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}',
             'data: {data}'
         ]
         if torch.cuda.is_available():
@@ -142,26 +129,24 @@ class MetricLogger(object):
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                    print(
+                        log_msg.format(i, len(iterable), eta=eta_string, meters=str(self),
+                                       time=str(iter_time), data=str(data_time),
+                                       memory=torch.cuda.max_memory_allocated() / MB))
                 else:
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time)))
+                    print(
+                        log_msg.format(i, len(iterable), eta=eta_string, meters=str(self),
+                                       time=str(iter_time), data=str(data_time)))
             i += 1
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('{} Total time: {} ({:.4f} s / it)'.format(
-            header, total_time_str, total_time / len(iterable)))
-        
+        print('{} Total time: {} ({:.4f} s / it)'.format(header, total_time_str,
+                                                         total_time / len(iterable)))
 
 
 class AttrDict(dict):
+
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
@@ -173,6 +158,7 @@ def compute_acc(logits, label, reduction='mean'):
         return ret.detach()
     elif reduction == 'mean':
         return ret.mean().item()
+
 
 def compute_n_params(model, return_str=True):
     tot = 0
@@ -188,6 +174,7 @@ def compute_n_params(model, return_str=True):
             return '{:.1f}K'.format(tot / 1e3)
     else:
         return tot
+
 
 def setup_for_distributed(is_master):
     """
@@ -250,8 +237,7 @@ def init_distributed_mode(args):
 
     torch.cuda.set_device(args.gpu)
     args.dist_backend = 'nccl'
-    print('| distributed init (rank {}): {}'.format(
-        args.rank, args.dist_url), flush=True)
+    print('| distributed init (rank {}): {}'.format(args.rank, args.dist_url), flush=True)
     torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()

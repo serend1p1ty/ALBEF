@@ -4,13 +4,16 @@ Paper: `Stochastic Gradient Methods with Layer-wise Adaptive Moments for Trainin
     - https://arxiv.org/abs/1905.11286
 """
 
+import math
+
 import torch
 from torch.optim.optimizer import Optimizer
-import math
 
 
 class NovoGrad(Optimizer):
-    def __init__(self, params, grad_averaging=False, lr=0.1, betas=(0.95, 0.98), eps=1e-8, weight_decay=0):
+
+    def __init__(self, params, grad_averaging=False, lr=0.1, betas=(0.95, 0.98), eps=1e-8,
+                 weight_decay=0):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
         super(NovoGrad, self).__init__(params, defaults)
         self._lr = lr
@@ -38,7 +41,7 @@ class NovoGrad(Optimizer):
                         raise RuntimeError('NovoGrad does not support sparse gradients')
 
                     v = torch.norm(grad)**2
-                    m = grad/(torch.sqrt(v) + self._eps) + self._wd * p.data
+                    m = grad / (torch.sqrt(v) + self._eps) + self._wd * p.data
                     state['step'] = 0
                     state['v'] = v
                     state['m'] = m
@@ -65,13 +68,13 @@ class NovoGrad(Optimizer):
                     grad *= (1. - self._beta1)
 
                 g2 = torch.norm(grad)**2
-                v = self._beta2*v + (1. - self._beta2)*g2
-                m = self._beta1*m + (grad / (torch.sqrt(v) + self._eps) + self._wd * p.data)
-                bias_correction1 = 1 - self._beta1 ** step
-                bias_correction2 = 1 - self._beta2 ** step
+                v = self._beta2 * v + (1. - self._beta2) * g2
+                m = self._beta1 * m + (grad / (torch.sqrt(v) + self._eps) + self._wd * p.data)
+                bias_correction1 = 1 - self._beta1**step
+                bias_correction2 = 1 - self._beta2**step
                 step_size = group['lr'] * math.sqrt(bias_correction2) / bias_correction1
 
-                state['v'], state['m']  = v, m
+                state['v'], state['m'] = v, m
                 state['grad_ema'] = grad_ema
                 p.data.add_(-step_size, m)
         return loss

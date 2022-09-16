@@ -8,14 +8,16 @@ Copyright (c) 2020-present NAVER Corp.
 MIT license
 """
 
-import torch
-import torch.nn as nn
-from torch.optim.optimizer import Optimizer, required
 import math
 
+import torch
+from torch.optim.optimizer import Optimizer, required
+
+
 class SGDP(Optimizer):
-    def __init__(self, params, lr=required, momentum=0, dampening=0,
-                 weight_decay=0, nesterov=False, eps=1e-8, delta=0.1, wd_ratio=0.1):
+
+    def __init__(self, params, lr=required, momentum=0, dampening=0, weight_decay=0, nesterov=False,
+                 eps=1e-8, delta=0.1, wd_ratio=0.1):
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening, weight_decay=weight_decay,
                         nesterov=nesterov, eps=eps, delta=delta, wd_ratio=wd_ratio)
         super(SGDP, self).__init__(params, defaults)
@@ -84,11 +86,12 @@ class SGDP(Optimizer):
                 # Projection
                 wd_ratio = 1
                 if len(p.shape) > 1:
-                    d_p, wd_ratio = self._projection(p, grad, d_p, group['delta'], group['wd_ratio'], group['eps'])
+                    d_p, wd_ratio = self._projection(p, grad, d_p, group['delta'],
+                                                     group['wd_ratio'], group['eps'])
 
                 # Weight decay
                 if weight_decay != 0:
-                    p.data.mul_(1 - group['lr'] * group['weight_decay'] * wd_ratio / (1-momentum))
+                    p.data.mul_(1 - group['lr'] * group['weight_decay'] * wd_ratio / (1 - momentum))
 
                 # Step
                 p.data.add_(-group['lr'], d_p)

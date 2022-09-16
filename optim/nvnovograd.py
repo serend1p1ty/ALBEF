@@ -7,7 +7,6 @@ Paper: `Stochastic Gradient Methods with Layer-wise Adaptive Moments for Trainin
 
 import torch
 from torch.optim.optimizer import Optimizer
-import math
 
 
 class NvNovoGrad(Optimizer):
@@ -29,8 +28,8 @@ class NvNovoGrad(Optimizer):
             (default: False)
     """
 
-    def __init__(self, params, lr=1e-3, betas=(0.95, 0.98), eps=1e-8,
-                 weight_decay=0, grad_averaging=False, amsgrad=False):
+    def __init__(self, params, lr=1e-3, betas=(0.95, 0.98), eps=1e-8, weight_decay=0,
+                 grad_averaging=False, amsgrad=False):
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if not 0.0 <= eps:
@@ -39,10 +38,8 @@ class NvNovoGrad(Optimizer):
             raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
-        defaults = dict(lr=lr, betas=betas, eps=eps,
-                        weight_decay=weight_decay,
-                        grad_averaging=grad_averaging,
-                        amsgrad=amsgrad)
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
+                        grad_averaging=grad_averaging, amsgrad=amsgrad)
 
         super(NvNovoGrad, self).__init__(params, defaults)
 

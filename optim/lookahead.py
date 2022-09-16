@@ -4,12 +4,14 @@ Paper: `Lookahead Optimizer: k steps forward, 1 step back` - https://arxiv.org/a
 
 Hacked together by / Copyright 2020 Ross Wightman
 """
+from collections import defaultdict
+
 import torch
 from torch.optim.optimizer import Optimizer
-from collections import defaultdict
 
 
 class Lookahead(Optimizer):
+
     def __init__(self, base_optimizer, alpha=0.5, k=6):
         if not 0.0 <= alpha <= 1.0:
             raise ValueError(f'Invalid slow update rate: {alpha}')
@@ -43,7 +45,7 @@ class Lookahead(Optimizer):
             self.update_slow(group)
 
     def step(self, closure=None):
-        #assert id(self.param_groups) == id(self.base_optimizer.param_groups)
+        # assert id(self.param_groups) == id(self.base_optimizer.param_groups)
         loss = self.base_optimizer.step(closure)
         for group in self.param_groups:
             group['lookahead_step'] += 1
@@ -54,8 +56,7 @@ class Lookahead(Optimizer):
     def state_dict(self):
         fast_state_dict = self.base_optimizer.state_dict()
         slow_state = {
-            (id(k) if isinstance(k, torch.Tensor) else k): v
-            for k, v in self.state.items()
+            (id(k) if isinstance(k, torch.Tensor) else k): v for k, v in self.state.items()
         }
         fast_state = fast_state_dict['state']
         param_groups = fast_state_dict['param_groups']

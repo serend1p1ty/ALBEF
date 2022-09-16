@@ -51,7 +51,8 @@ def equalize_func(img):
         hist = cv2.calcHist([ch], [0], None, [n_bins], [0, n_bins])
         non_zero_hist = hist[hist != 0].reshape(-1)
         step = np.sum(non_zero_hist[:-1]) // (n_bins - 1)
-        if step == 0: return ch
+        if step == 0:
+            return ch
         n = np.empty_like(hist)
         n[0] = step // 2
         n[1:] = hist[:-1]
@@ -95,13 +96,8 @@ def color_func(img, factor):
     #      np.eye(3) * factor
     #      + np.float32([0.114, 0.587, 0.299]).reshape(3, 1) * (1. - factor)
     #  )[np.newaxis, np.newaxis, :]
-    M = (
-            np.float32([
-                [0.886, -0.114, -0.114],
-                [-0.587, 0.413, -0.587],
-                [-0.299, -0.299, 0.701]]) * factor
-            + np.float32([[0.114], [0.587], [0.299]])
-    )
+    M = (np.float32([[0.886, -0.114, -0.114], [-0.587, 0.413, -0.587], [-0.299, -0.299, 0.701]]) *
+         factor + np.float32([[0.114], [0.587], [0.299]]))
     out = np.matmul(img, M).clip(0, 255).astype(np.uint8)
     return out
 
@@ -111,10 +107,8 @@ def contrast_func(img, factor):
         same output as PIL.ImageEnhance.Contrast
     """
     mean = np.sum(np.mean(img, axis=(0, 1)) * np.array([0.114, 0.587, 0.299]))
-    table = np.array([(
-        el - mean) * factor + mean
-        for el in range(256)
-    ]).clip(0, 255).astype(np.uint8)
+    table = np.array([(el - mean) * factor + mean for el in range(256)]).clip(0,
+                                                                              255).astype(np.uint8)
     out = table[img]
     return out
 
@@ -206,30 +200,37 @@ def cutout_func(img, pad_size, replace=(0, 0, 0)):
 
 ### level to args
 def enhance_level_to_args(MAX_LEVEL):
+
     def level_to_args(level):
         return ((level / MAX_LEVEL) * 1.8 + 0.1,)
+
     return level_to_args
 
 
 def shear_level_to_args(MAX_LEVEL, replace_value):
+
     def level_to_args(level):
         level = (level / MAX_LEVEL) * 0.3
-        if np.random.random() > 0.5: level = -level
+        if np.random.random() > 0.5:
+            level = -level
         return (level, replace_value)
 
     return level_to_args
 
 
 def translate_level_to_args(translate_const, MAX_LEVEL, replace_value):
+
     def level_to_args(level):
         level = (level / MAX_LEVEL) * float(translate_const)
-        if np.random.random() > 0.5: level = -level
+        if np.random.random() > 0.5:
+            level = -level
         return (level, replace_value)
 
     return level_to_args
 
 
 def cutout_level_to_args(cutout_const, MAX_LEVEL, replace_value):
+
     def level_to_args(level):
         level = int((level / MAX_LEVEL) * cutout_const)
         return (level, replace_value)
@@ -238,9 +239,11 @@ def cutout_level_to_args(cutout_const, MAX_LEVEL, replace_value):
 
 
 def solarize_level_to_args(MAX_LEVEL):
+
     def level_to_args(level):
         level = int((level / MAX_LEVEL) * 256)
-        return (level, )
+        return (level,)
+
     return level_to_args
 
 
@@ -249,13 +252,16 @@ def none_level_to_args(level):
 
 
 def posterize_level_to_args(MAX_LEVEL):
+
     def level_to_args(level):
         level = int((level / MAX_LEVEL) * 4)
-        return (level, )
+        return (level,)
+
     return level_to_args
 
 
 def rotate_level_to_args(MAX_LEVEL, replace_value):
+
     def level_to_args(level):
         level = (level / MAX_LEVEL) * 30
         if np.random.random() < 0.5:
@@ -296,12 +302,8 @@ arg_dict = {
     'Brightness': enhance_level_to_args(MAX_LEVEL),
     'Sharpness': enhance_level_to_args(MAX_LEVEL),
     'ShearX': shear_level_to_args(MAX_LEVEL, replace_value),
-    'TranslateX': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
-    'TranslateY': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
+    'TranslateX': translate_level_to_args(translate_const, MAX_LEVEL, replace_value),
+    'TranslateY': translate_level_to_args(translate_const, MAX_LEVEL, replace_value),
     'Posterize': posterize_level_to_args(MAX_LEVEL),
     'ShearY': shear_level_to_args(MAX_LEVEL, replace_value),
 }
@@ -314,7 +316,7 @@ class RandomAugment(object):
         self.M = M
         self.isPIL = isPIL
         if augs:
-            self.augs = augs       
+            self.augs = augs
         else:
             self.augs = list(arg_dict.keys())
 
@@ -324,13 +326,13 @@ class RandomAugment(object):
 
     def __call__(self, img):
         if self.isPIL:
-            img = np.array(img)            
+            img = np.array(img)
         ops = self.get_random_ops()
         for name, prob, level in ops:
             if np.random.random() > prob:
                 continue
             args = arg_dict[name](level)
-            img = func_dict[name](img, *args) 
+            img = func_dict[name](img, *args)
         return img
 
 

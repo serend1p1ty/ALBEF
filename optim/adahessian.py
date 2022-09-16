@@ -44,7 +44,8 @@ class Adahessian(torch.optim.Optimizer):
         self.seed = 2147483647
         self.generator = torch.Generator().manual_seed(self.seed)
 
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, hessian_power=hessian_power)
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
+                        hessian_power=hessian_power)
         super(Adahessian, self).__init__(params, defaults)
 
         for p in self.get_params():
@@ -68,7 +69,8 @@ class Adahessian(torch.optim.Optimizer):
         """
 
         for p in self.get_params():
-            if not isinstance(p.hess, float) and self.state[p]["hessian step"] % self.update_each == 0:
+            if not isinstance(p.hess,
+                              float) and self.state[p]["hessian step"] % self.update_each == 0:
                 p.hess.zero_()
 
     @torch.no_grad()
@@ -79,23 +81,28 @@ class Adahessian(torch.optim.Optimizer):
 
         params = []
         for p in filter(lambda p: p.grad is not None, self.get_params()):
-            if self.state[p]["hessian step"] % self.update_each == 0:  # compute the trace only each `update_each` step
+            if self.state[p][
+                    "hessian step"] % self.update_each == 0:  # compute the trace only each `update_each` step
                 params.append(p)
             self.state[p]["hessian step"] += 1
 
         if len(params) == 0:
             return
 
-        if self.generator.device != params[0].device:  # hackish way of casting the generator to the right device
+        if self.generator.device != params[
+                0].device:  # hackish way of casting the generator to the right device
             self.generator = torch.Generator(params[0].device).manual_seed(self.seed)
 
         grads = [p.grad for p in params]
 
         for i in range(self.n_samples):
             # Rademacher distribution {-1.0, 1.0}
-            zs = [torch.randint(0, 2, p.size(), generator=self.generator, device=p.device) * 2.0 - 1.0 for p in params]
-            h_zs = torch.autograd.grad(
-                grads, params, grad_outputs=zs, only_inputs=True, retain_graph=i < self.n_samples - 1)
+            zs = [
+                torch.randint(0, 2, p.size(), generator=self.generator, device=p.device) * 2.0 - 1.0
+                for p in params
+            ]
+            h_zs = torch.autograd.grad(grads, params, grad_outputs=zs, only_inputs=True,
+                                       retain_graph=i < self.n_samples - 1)
             for h_z, z, p in zip(h_zs, zs, params):
                 p.hess += h_z * z / self.n_samples  # approximate the expected values of z*(H@z)
 
@@ -120,7 +127,8 @@ class Adahessian(torch.optim.Optimizer):
                     continue
 
                 if self.avg_conv_kernel and p.dim() == 4:
-                    p.hess = torch.abs(p.hess).mean(dim=[2, 3], keepdim=True).expand_as(p.hess).clone()
+                    p.hess = torch.abs(p.hess).mean(dim=[2, 3],
+                                                    keepdim=True).expand_as(p.hess).clone()
 
                 # Perform correct stepweight decay as in AdamW
                 p.mul_(1 - group['lr'] * group['weight_decay'])
@@ -143,8 +151,8 @@ class Adahessian(torch.optim.Optimizer):
                 exp_avg.mul_(beta1).add_(p.grad, alpha=1 - beta1)
                 exp_hessian_diag_sq.mul_(beta2).addcmul_(p.hess, p.hess, value=1 - beta2)
 
-                bias_correction1 = 1 - beta1 ** state['step']
-                bias_correction2 = 1 - beta2 ** state['step']
+                bias_correction1 = 1 - beta1**state['step']
+                bias_correction2 = 1 - beta2**state['step']
 
                 k = group['hessian_power']
                 denom = (exp_hessian_diag_sq / bias_correction2).pow_(k / 2).add_(group['eps'])

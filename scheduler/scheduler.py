@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 import torch
 
@@ -22,14 +22,8 @@ class Scheduler:
      * https://github.com/allenai/allennlp/tree/master/allennlp/training/learning_rate_schedulers
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 param_group_field: str,
-                 noise_range_t=None,
-                 noise_type='normal',
-                 noise_pct=0.67,
-                 noise_std=1.0,
-                 noise_seed=None,
+    def __init__(self, optimizer: torch.optim.Optimizer, param_group_field: str, noise_range_t=None,
+                 noise_type='normal', noise_pct=0.67, noise_std=1.0, noise_seed=None,
                  initialize: bool = True) -> None:
         self.optimizer = optimizer
         self.param_group_field = param_group_field
@@ -42,8 +36,11 @@ class Scheduler:
         else:
             for i, group in enumerate(self.optimizer.param_groups):
                 if self._initial_param_group_field not in group:
-                    raise KeyError(f"{self._initial_param_group_field} missing from param_groups[{i}]")
-        self.base_values = [group[self._initial_param_group_field] for group in self.optimizer.param_groups]
+                    raise KeyError(
+                        f"{self._initial_param_group_field} missing from param_groups[{i}]")
+        self.base_values = [
+            group[self._initial_param_group_field] for group in self.optimizer.param_groups
+        ]
         self.metric = None  # any point to having this for all?
         self.noise_range_t = noise_range_t
         self.noise_pct = noise_pct
