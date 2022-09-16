@@ -1,17 +1,11 @@
-train_file: ['data/coco.json',
-               'data/vg.json',
-               'data/cc12m.json',
-               'data/cc3m_train.json',
-               'data/cc3m_val.json',
-               'data/sbu.json'               
-               ]
-# each train_file (json) contains a python list where each item is {'image': img_path, 'caption': text or list_of_text }               
+train_file: ['/disk1/lizhengjia.lzj/tq-archive-dataset/train.json']
+# each train_file (json) contains a python list where each item is {'image': img_path, 'caption': text or list_of_text }
 bert_config: 'configs/config_bert.json'
 
 image_res: 256
 vision_width: 768
 embed_dim: 256
-batch_size: 64
+batch_size: 16
 temp: 0.07
 mlm_probability: 0.15
 queue_size: 65536
