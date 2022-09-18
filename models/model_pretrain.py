@@ -83,29 +83,41 @@ class ALBEF(nn.Module):
         with torch.no_grad():
             self.temp.clamp_(0.001, 0.5)
 
+        # image: [B, 3, 256, 256]
+        # [B, 257, 768]
         image_embeds = self.visual_encoder(image)
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device)
 
+        # [B, 256]
         image_feat = F.normalize(self.vision_proj(image_embeds[:, 0, :]), dim=-1)
 
+        # text.input_ids: [B, 25]
         text_output = self.text_encoder.bert(text.input_ids, attention_mask=text.attention_mask,
                                              return_dict=True, mode='text')
+        # [B, 25, 768]
         text_embeds = text_output.last_hidden_state
+        # [B, 256]
         text_feat = F.normalize(self.text_proj(text_embeds[:, 0, :]), dim=-1)
 
         # get momentum features
         with torch.no_grad():
             self._momentum_update()
+            # [B, 257, 768]
             image_embeds_m = self.visual_encoder_m(image)
+            # [B, 256]
             image_feat_m = F.normalize(self.vision_proj_m(image_embeds_m[:, 0, :]), dim=-1)
+            # [256, 65536+B]
             image_feat_all = torch.cat([image_feat_m.t(), self.image_queue.clone().detach()], dim=1)
             text_output_m = self.text_encoder_m.bert(text.input_ids,
                                                      attention_mask=text.attention_mask,
                                                      return_dict=True, mode='text')
+            # [B, 256]
             text_feat_m = F.normalize(self.text_proj_m(text_output_m.last_hidden_state[:, 0, :]),
                                       dim=-1)
+            # [256, 65536+B]
             text_feat_all = torch.cat([text_feat_m.t(), self.text_queue.clone().detach()], dim=1)
 
+            # [B, 65536+B]
             sim_i2t_m = image_feat_m @ text_feat_all / self.temp
             sim_t2i_m = text_feat_m @ image_feat_all / self.temp
 
@@ -148,6 +160,7 @@ class ALBEF(nn.Module):
         for b in range(bs):
             neg_idx = torch.multinomial(weights_t2i[b], 1).item()
             image_embeds_neg.append(image_embeds[neg_idx])
+        # [B, 257, 768]
         image_embeds_neg = torch.stack(image_embeds_neg, dim=0)
 
         # select a negative text for each image
@@ -157,13 +170,19 @@ class ALBEF(nn.Module):
             neg_idx = torch.multinomial(weights_i2t[b], 1).item()
             text_embeds_neg.append(text_embeds[neg_idx])
             text_atts_neg.append(text.attention_mask[neg_idx])
+        # [B, 25, 768]
         text_embeds_neg = torch.stack(text_embeds_neg, dim=0)
+        # [B, 25]
         text_atts_neg = torch.stack(text_atts_neg, dim=0)
 
+        # [B*2, 25, 768]
         text_embeds_all = torch.cat([text_embeds, text_embeds_neg], dim=0)
+        # [B*2, 25]
         text_atts_all = torch.cat([text.attention_mask, text_atts_neg], dim=0)
 
+        # [B*2, 257, 768]
         image_embeds_all = torch.cat([image_embeds_neg, image_embeds], dim=0)
+        # [B*2, 257]
         image_atts_all = torch.cat([image_atts, image_atts], dim=0)
 
         output_neg = self.text_encoder.bert(
@@ -175,8 +194,11 @@ class ALBEF(nn.Module):
             mode='fusion',
         )
 
+        # output_pos.last_hidden_state: [B, 25, 768]
+        # output_neg.last_hidden_state: [B*2, 25, 768]
         vl_embeddings = torch.cat(
             [output_pos.last_hidden_state[:, 0, :], output_neg.last_hidden_state[:, 0, :]], dim=0)
+        # [B*3, 2]
         vl_output = self.itm_head(vl_embeddings)
 
         itm_labels = torch.cat(
@@ -193,6 +215,7 @@ class ALBEF(nn.Module):
                                       targets=labels, probability_matrix=probability_matrix)
 
         with torch.no_grad():
+            # [B, 25, 30522]
             logits_m = self.text_encoder_m(
                 input_ids,
                 attention_mask=text.attention_mask,
@@ -254,6 +277,7 @@ class ALBEF(nn.Module):
 
         # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
         indices_replaced = torch.bernoulli(torch.full(input_ids.shape, 0.8)).bool() & masked_indices
+        # mask_token_id: 103
         input_ids[indices_replaced] = self.tokenizer.mask_token_id
 
         # 10% of the time, we replace masked input tokens with random word
